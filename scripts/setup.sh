@@ -3,7 +3,7 @@
 # Without CONJURE_LLM_* it runs on the mock provider. Re-runnable; safe to run again to upgrade.
 set -euo pipefail
 # Conjure commit to run. Bump this (full 40-char SHA from InfinitumCorp/Conjure main) to upgrade.
-SHA=${CONJURE_SHA:-4a88351a23443ddecedc325d7b600a6766a34d09}
+SHA=${CONJURE_SHA:-b797917814d7e6ddc8db512c6000c6b302137eac}
 APP=conjure-ru.infinitumcorporation.ai
 PREVIEW=conjure-ru-preview.infinitumcorporation.ai
 MYIP=51.250.92.75
@@ -112,6 +112,9 @@ if [ -n "${CONJURE_LLM_KEY:-}" ]; then
   set_env CONJURE_LLM_REASONING "${CONJURE_LLM_REASONING:-none}"
   log "models: Yandex AI Studio, ${YANDEX_MODEL#gpt://*/}"
 fi
+# The global hostname (front/, a Cloudflare Worker) forwards here; staff who sign in through it are
+# sent back to it. It must also be on the conjure client's allow-list in Cumulus ID.
+set_env CONJURE_FRONT_HOSTS conjure.infinitumcorporation.ai
 # The Cloudflare gateway's Access token has no place here: everything stays in Russia.
 unset_env CONJURE_LLM_ACCESS_ID
 unset_env CONJURE_LLM_ACCESS_SECRET
