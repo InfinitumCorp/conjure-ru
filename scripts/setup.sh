@@ -106,8 +106,10 @@ if [ -n "${CONJURE_LLM_KEY:-}" ]; then
   if [ "$CONJURE_LLM_KEY" != vm ]; then set_env CONJURE_LLM_KEY "$CONJURE_LLM_KEY"; unset_env CONJURE_LLM_AUTH; fi
   set_env CONJURE_LLM_PROJECT "$YANDEX_FOLDER"
   set_env CONJURE_LLM_MODEL "$YANDEX_MODEL"
-  # Only sent when asked for: AI Studio documents no reasoning setting for Qwen.
-  if [ -n "${CONJURE_LLM_REASONING:-}" ]; then set_env CONJURE_LLM_REASONING "$CONJURE_LLM_REASONING"; else unset_env CONJURE_LLM_REASONING; fi
+  # "none" turns Qwen's thinking off. Tested on AI Studio 2026-11-12: with thinking on, Qwen3.6 spent
+  # ~1,400 tokens thinking about 2+2, so real prompts ran out of tokens before the JSON answer.
+  # Pass CONJURE_LLM_REASONING=low|medium|high to change it.
+  set_env CONJURE_LLM_REASONING "${CONJURE_LLM_REASONING:-none}"
   log "models: Yandex AI Studio, ${YANDEX_MODEL#gpt://*/}"
 fi
 # The Cloudflare gateway's Access token has no place here: everything stays in Russia.
