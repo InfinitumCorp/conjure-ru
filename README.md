@@ -24,6 +24,21 @@ The application code stays in [InfinitumCorp/Conjure](https://github.com/Infinit
 - The server sees Cloudflare's addresses for front traffic, so its guessing lockout counts by those addresses.
 - Deploy: `cd front && npm ci && npx cf deploy`. Test: `node --test test/`.
 
+### Pointing products at Conjure
+
+Each product needs `CONJURE_URL` and its own product key. Issue the key in the dashboard (Product keys → Issue; it is shown once), then from the product's folder run `bash ../conjure-ru/scripts/point-product.sh` and paste the key at the hidden prompt. The script checks that Conjure accepts the key, then stores both values with `wrangler secret put`.
+
+| Product | Folder | Key setting |
+|---|---|---|
+| :\ARCHITECT\ | `architect` | `CONJURE_PRODUCT_KEY` (default) |
+| Cumulus://Mail | `cumulus-mail` | `CONJURE_PRODUCT_KEY` (default) |
+| +SPCTR | `infinitum-nexus/apps/spectre` | `CONJURE_PRODUCT_KEY` (default) |
+| FIRM Wallet | `infinitum-nexus/apps/firm-wallet` | `KEY_VAR=CONJURE_KEY` |
+
+SCALVS.ai is not on the list: its `CONJURE_URL` setting expects a MiroFish-style engine, not Conjure's `/v1` API, and it forecasts on its own engine until it is ported.
+
+Wait until the server runs real models (a Yandex key is set); in mock mode every product would get placeholder forecasts.
+
 ## Layout
 
 - `scripts/setup.sh`: Node (checksum-verified), the pinned Conjure release in `/opt/conjure/releases/<sha>`, the sandboxed `conjure` systemd service, nginx and TLS. Re-runnable.
