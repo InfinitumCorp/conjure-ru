@@ -3,7 +3,7 @@
 # Without CONJURE_LLM_* it runs on the mock provider. Re-runnable; safe to run again to upgrade.
 set -euo pipefail
 # Conjure commit to run. Bump this (full 40-char SHA from InfinitumCorp/Conjure main) to upgrade.
-SHA=${CONJURE_SHA:-3d20894e55f442269dc1a7297efad2bac605b2c0}
+SHA=${CONJURE_SHA:-4a88351a23443ddecedc325d7b600a6766a34d09}
 APP=conjure-ru.infinitumcorporation.ai
 PREVIEW=conjure-ru-preview.infinitumcorporation.ai
 MYIP=51.250.92.75
