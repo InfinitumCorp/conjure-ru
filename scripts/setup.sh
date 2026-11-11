@@ -92,7 +92,7 @@ EOF
 sudo systemctl daemon-reload
 sudo systemctl enable conjure >/dev/null 2>&1
 sudo systemctl restart conjure
-for i in $(seq 1 30); do curl -fsS http://127.0.0.1:4317/healthz >/dev/null 2>&1 && break; sleep 1; done
+for _ in $(seq 1 30); do curl -fsS http://127.0.0.1:4317/healthz >/dev/null 2>&1 && break; sleep 1; done
 log "healthz: $(curl -s http://127.0.0.1:4317/healthz)"
 log "/ without login: $(curl -s -o /dev/null -w '%{http_code} -> %{redirect_url}' http://127.0.0.1:4317/)"
 log "mode: $(sudo journalctl -u conjure --no-pager -n 20 | grep -oE '(live|offline)[^\"]*' | tail -1)"
