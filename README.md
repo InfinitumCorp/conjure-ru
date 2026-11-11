@@ -14,10 +14,21 @@ The application code stays in [InfinitumCorp/Conjure](https://github.com/Infinit
 | Preview | Separate host `conjure-ru-preview.infinitumcorporation.ai` (127.0.0.1:4318) |
 | Backups | Yandex disk snapshot daily at 00:00 UTC, 7 kept |
 
+## Global hostname
+
+**https://conjure.infinitumcorporation.ai** reaches the same server from networks that block Yandex Cloud's address range (in a worldwide probe, 3 of 40 networks failed to reach the server directly). It is a Cloudflare Worker (`front/`) that forwards every request to `conjure-ru.infinitumcorporation.ai` over HTTPS. It stores nothing and runs no model; Conjure, its data and its models stay on the Russian server.
+
+- Products outside Russia should use the global hostname as `CONJURE_URL`; products in Russia can use either.
+- Cloudflare terminates TLS for the global hostname, so traffic through it is decrypted in transit on Cloudflare's network before being re-encrypted to the server. Use `conjure-ru.infinitumcorporation.ai` directly where that matters.
+- The account's "All Workers" Access app covers every Worker, so the hostname needs its own public Access app ("Conjure global front (public)", bypass for everyone), as the other public sites have. Conjure's own sign-in still applies behind it.
+- The server sees Cloudflare's addresses for front traffic, so its guessing lockout counts by those addresses.
+- Deploy: `cd front && npm ci && npx cf deploy`. Test: `node --test test/`.
+
 ## Layout
 
 - `scripts/setup.sh`: Node (checksum-verified), the pinned Conjure release in `/opt/conjure/releases/<sha>`, the sandboxed `conjure` systemd service, nginx and TLS. Re-runnable.
 - `scripts/check.sh`: outside checks; also runs from the `check` workflow on demand.
+- `front/`: the global hostname's forwarding Worker.
 
 ## Deploy or upgrade
 
