@@ -9,7 +9,7 @@ The application code stays in [InfinitumCorp/Conjure](https://github.com/Infinit
 | | Russia |
 |---|---|
 | Hosting | Yandex Cloud, nginx + Let's Encrypt in front of Node on 127.0.0.1 |
-| Model provider | **100% in Russia, no Claude.** Predictions and code generation run on open-weight models on **Yandex Cloud AI Studio** (default gpt-oss-120b, Apache 2.0; Qwen3 235B also available), in Russian data centers. `setup.sh` refuses to run if `ANTHROPIC_API_KEY` is set or a model URL points outside Russia, and removes any Cloudflare gateway settings. AI Studio bills per token (gpt-oss-120b about $0.0025 per 1,000 tokens, roughly $0.10 a forecast) to the Yandex account. With no `CONJURE_LLM_KEY` it runs on the mock provider |
+| Model provider | **100% in Russia, no Claude.** Predictions and code generation run on open-weight models on **Yandex Cloud AI Studio** (default Qwen3.6 35B, Apache 2.0, 256k context; AI Studio withdrew gpt-oss on 2026-10-30), in Russian data centers. `setup.sh` refuses to run if `ANTHROPIC_API_KEY` is set or a model URL points outside Russia, and removes any Cloudflare gateway settings. AI Studio bills per token to the Yandex account (see its [pricing page](https://aistudio.yandex.ru/docs/en/ai-studio/pricing.html)); the account's 4,000 ₽ starter grant covers it at first. With no `CONJURE_LLM_KEY` it runs on the mock provider |
 | Sign-in | Required (`CONJURE_ACCESS_TOKEN` set). Staff sign in with Cumulus ID; only IDs in `CID_OWNERS` get in |
 | Preview | Separate host `conjure-ru-preview.infinitumcorporation.ai` (127.0.0.1:4318) |
 | Backups | Yandex disk snapshot daily at 00:00 UTC, 7 kept |
@@ -37,7 +37,7 @@ Created once by `setup.sh` with a random `CONJURE_ACCESS_TOKEN`. Fill in on the 
 
 - `CID_OWNERS`: the Cumulus IDs (`cid_...`) allowed in. Until set, nobody can sign in.
 - `CID_ISSUER` (optional): a Cumulus ID mirror, only if id.cumuluscloud.app stops loading from Russia.
-- `CONJURE_LLM_URL`, `CONJURE_LLM_KEY`, `CONJURE_LLM_PROJECT`, `CONJURE_LLM_MODEL`, `CONJURE_LLM_REASONING`: Yandex AI Studio. Empty means mock mode. Don't edit these by hand; give `setup.sh` the key and it fills in the rest (URL `https://ai.api.cloud.yandex.net/v1`, folder `b1g3bonfmtl53fs762er`, model `gpt://<folder>/gpt-oss-120b/latest`, reasoning `low`).
+- `CONJURE_LLM_URL`, `CONJURE_LLM_KEY`, `CONJURE_LLM_PROJECT`, `CONJURE_LLM_MODEL`, `CONJURE_LLM_REASONING`: Yandex AI Studio. Empty means mock mode. Don't edit these by hand; give `setup.sh` the key and it fills in the rest (URL `https://ai.api.cloud.yandex.net/v1`, folder `b1g3bonfmtl53fs762er`, model `gpt://<folder>/qwen3.6-35b-a3b`, no reasoning setting).
 
 ### Turning the models on
 
@@ -50,7 +50,11 @@ cd conjure-ru && git pull
 read -rs CONJURE_LLM_KEY && export CONJURE_LLM_KEY && bash scripts/setup.sh
 ```
 
-To use Qwen3 235B instead, add `CONJURE_LLM_MODEL=gpt://b1g3bonfmtl53fs762er/qwen3-235b-a22b-fp8/latest` before `bash`.
+To use another model, add `CONJURE_LLM_MODEL=gpt://b1g3bonfmtl53fs762er/<model>` before `bash`. To list the models the folder can use, run this on the server (it reads the key from the settings file without printing it):
+
+```bash
+sudo bash -c 'set -a; . /etc/conjure/env; curl -s -H "Authorization: Api-Key $CONJURE_LLM_KEY" -H "OpenAI-Project: $CONJURE_LLM_PROJECT" https://ai.api.cloud.yandex.net/v1/models'
+```
 
 ## Cumulus ID
 

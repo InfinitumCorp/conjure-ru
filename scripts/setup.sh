@@ -59,8 +59,8 @@ CONJURE_PUBLIC_URL=https://$APP
 # CONJURE_LLM_URL=https://ai.api.cloud.yandex.net/v1
 # CONJURE_LLM_KEY=
 # CONJURE_LLM_PROJECT=
-# CONJURE_LLM_MODEL=gpt://<folder>/gpt-oss-120b/latest
-# CONJURE_LLM_REASONING=low
+# CONJURE_LLM_MODEL=gpt://<folder>/qwen3.6-35b-a3b
+# CONJURE_LLM_REASONING=
 EOF
 fi
 
@@ -71,8 +71,9 @@ fi
 # It is written root-only and never printed. Without a key the server stays on the mock provider.
 YANDEX_FOLDER=${YANDEX_FOLDER:-b1g3bonfmtl53fs762er}
 YANDEX_URL=https://ai.api.cloud.yandex.net/v1
-# gpt-oss-120b (Apache 2.0): tool calling and reasoning; Qwen3 235B is the larger alternative.
-YANDEX_MODEL=${CONJURE_LLM_MODEL:-gpt://$YANDEX_FOLDER/gpt-oss-120b/latest}
+# Qwen3.6 35B (Apache 2.0, 256k context): AI Studio's current open-weight model. gpt-oss was
+# withdrawn on 2026-10-30. List what the folder can use with GET $YANDEX_URL/models.
+YANDEX_MODEL=${CONJURE_LLM_MODEL:-gpt://$YANDEX_FOLDER/qwen3.6-35b-a3b}
 set_env() { # name value: replace or append one line in /etc/conjure/env
   local tmp
   tmp=$(sudo mktemp)
@@ -93,8 +94,9 @@ if [ -n "${CONJURE_LLM_KEY:-}" ]; then
   set_env CONJURE_LLM_KEY "$CONJURE_LLM_KEY"
   set_env CONJURE_LLM_PROJECT "$YANDEX_FOLDER"
   set_env CONJURE_LLM_MODEL "$YANDEX_MODEL"
-  set_env CONJURE_LLM_REASONING "${CONJURE_LLM_REASONING:-low}"
-  log "models: Yandex AI Studio, $(basename "$(dirname "$YANDEX_MODEL")")"
+  # Only sent when asked for: AI Studio documents no reasoning setting for Qwen.
+  if [ -n "${CONJURE_LLM_REASONING:-}" ]; then set_env CONJURE_LLM_REASONING "$CONJURE_LLM_REASONING"; else unset_env CONJURE_LLM_REASONING; fi
+  log "models: Yandex AI Studio, ${YANDEX_MODEL#gpt://*/}"
 fi
 # The Cloudflare gateway's Access token has no place here: everything stays in Russia.
 unset_env CONJURE_LLM_ACCESS_ID
