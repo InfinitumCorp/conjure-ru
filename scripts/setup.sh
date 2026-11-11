@@ -3,7 +3,7 @@
 # Without CONJURE_LLM_* it runs on the mock provider. Re-runnable; safe to run again to upgrade.
 set -euo pipefail
 # Conjure commit to run. Bump this (full 40-char SHA from InfinitumCorp/Conjure main) to upgrade.
-SHA=${CONJURE_SHA:-1da489e5e9babe65228280bcf552ab458ef58bbb}
+SHA=${CONJURE_SHA:-285911ef3d00d2dc5e0a21d4baac64f8f9370735}
 APP=conjure-ru.infinitumcorporation.ai
 PREVIEW=conjure-ru-preview.infinitumcorporation.ai
 MYIP=51.250.92.75
@@ -62,6 +62,38 @@ CONJURE_PUBLIC_URL=https://$APP
 # CONJURE_LLM_MODEL=@cf/qwen/qwen3-30b-a3b-fp8
 # CONJURE_LLM_REASONING=none
 EOF
+fi
+
+# Model gateway: open-weight models through conjure-llm on Cloudflare (Workers AI within its free
+# allowance, then free fallbacks: OVHcloud, Pollinations, LLM7, plus Groq/NVIDIA/OpenRouter if keyed).
+# The gateway calls those providers from Cloudflare, so geo-blocks on Russian IPs don't apply.
+# Pass the gateway values in the environment to set or replace them in /etc/conjure/env:
+#   CONJURE_LLM_KEY=... CONJURE_LLM_ACCESS_ID=... CONJURE_LLM_ACCESS_SECRET=... bash scripts/setup.sh
+# They are written root-only and never printed. Without a key the server stays on the mock provider.
+GATEWAY_URL=https://conjure-llm.infinitumcorp.workers.dev/v1
+set_env() { # name value: replace or append one line in /etc/conjure/env
+  local tmp
+  tmp=$(sudo mktemp)
+  sudo grep -v "^$1=" /etc/conjure/env | sudo tee "$tmp" >/dev/null || true
+  printf '%s=%s\n' "$1" "$2" | sudo tee -a "$tmp" >/dev/null
+  sudo install -m 0600 "$tmp" /etc/conjure/env
+  sudo rm -f "$tmp"
+}
+if [ -n "${CONJURE_LLM_KEY:-}" ]; then
+  set_env CONJURE_LLM_URL "${CONJURE_LLM_URL:-$GATEWAY_URL}"
+  set_env CONJURE_LLM_KEY "$CONJURE_LLM_KEY"
+  set_env CONJURE_LLM_MODEL "${CONJURE_LLM_MODEL:-@cf/qwen/qwen3-30b-a3b-fp8}"
+  set_env CONJURE_LLM_REASONING "${CONJURE_LLM_REASONING:-none}"
+  if [ -n "${CONJURE_LLM_ACCESS_ID:-}" ] && [ -n "${CONJURE_LLM_ACCESS_SECRET:-}" ]; then
+    set_env CONJURE_LLM_ACCESS_ID "$CONJURE_LLM_ACCESS_ID"
+    set_env CONJURE_LLM_ACCESS_SECRET "$CONJURE_LLM_ACCESS_SECRET"
+  fi
+  log "model gateway set: ${CONJURE_LLM_URL:-$GATEWAY_URL}"
+fi
+# Belt and braces: this server must never talk to Claude.
+if sudo grep -q '^ANTHROPIC_API_KEY=' /etc/conjure/env; then
+  echo "[conjure] ANTHROPIC_API_KEY must never be set on the Russia server; remove it from /etc/conjure/env" >&2
+  exit 1
 fi
 
 sudo tee /etc/systemd/system/conjure.service >/dev/null <<EOF

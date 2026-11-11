@@ -9,7 +9,7 @@ The application code stays in [InfinitumCorp/Conjure](https://github.com/Infinit
 | | Russia |
 |---|---|
 | Hosting | Yandex Cloud, nginx + Let's Encrypt in front of Node on 127.0.0.1 |
-| Model provider | **No Claude.** `ANTHROPIC_API_KEY` is never set. With no `CONJURE_LLM_*` values it runs on the mock provider; set them to use open-weight models through the conjure-llm gateway |
+| Model provider | **No Claude.** `ANTHROPIC_API_KEY` is never set (`setup.sh` refuses to run if it is). Free open-weight models through the conjure-llm gateway: Workers AI Qwen3 within its free daily allowance, then free fallbacks (OVHcloud, Pollinations, LLM7, and Groq/NVIDIA/OpenRouter if keyed). The gateway reaches those providers from Cloudflare, so Russian geo-blocks (Groq returns 403 here) don't apply. With no `CONJURE_LLM_KEY` it runs on the mock provider |
 | Sign-in | Required (`CONJURE_ACCESS_TOKEN` set). Staff sign in with Cumulus ID; only IDs in `CID_OWNERS` get in |
 | Preview | Separate host `conjure-ru-preview.infinitumcorporation.ai` (127.0.0.1:4318) |
 | Backups | Yandex disk snapshot daily at 00:00 UTC, 7 kept |
@@ -37,7 +37,7 @@ Created once by `setup.sh` with a random `CONJURE_ACCESS_TOKEN`. Fill in on the 
 
 - `CID_OWNERS`: the Cumulus IDs (`cid_...`) allowed in. Until set, nobody can sign in.
 - `CID_ISSUER` (optional): a Cumulus ID mirror, only if id.cumuluscloud.app stops loading from Russia.
-- `CONJURE_LLM_URL`, `CONJURE_LLM_KEY`, `CONJURE_LLM_ACCESS_ID`, `CONJURE_LLM_ACCESS_SECRET`, `CONJURE_LLM_MODEL`, `CONJURE_LLM_REASONING`: the open-weight gateway. Empty means mock mode.
+- `CONJURE_LLM_URL`, `CONJURE_LLM_KEY`, `CONJURE_LLM_ACCESS_ID`, `CONJURE_LLM_ACCESS_SECRET`, `CONJURE_LLM_MODEL`, `CONJURE_LLM_REASONING`: the open-weight gateway. Empty means mock mode. Rather than editing by hand, pass the key and Access service token to `setup.sh` in the environment; it fills in the rest (URL `https://conjure-llm.infinitumcorp.workers.dev/v1`, model `@cf/qwen/qwen3-30b-a3b-fp8`, reasoning `none`). The values live in AWS SSM (us-east-2): `/conjure/llm-key`, `/conjure/llm-access-id`, `/conjure/llm-access-secret`.
 
 ## Cumulus ID
 
