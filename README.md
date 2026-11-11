@@ -67,6 +67,14 @@ Created once by `setup.sh` with a random `CONJURE_ACCESS_TOKEN`. Fill in on the 
 
 ### Turning the models on
 
+**Current setup: no key.** The VM has the service account `conjure-models` (role `ai.languageModels.user` on folder `default`) attached, and Conjure signs each model call with the VM's own short-lived IAM token (`CONJURE_LLM_AUTH=yandex-vm`). To (re)apply it on the server:
+
+```bash
+cd conjure-ru && git pull && CONJURE_LLM_AUTH=yandex-vm bash scripts/setup.sh
+```
+
+**Alternative: an API key**, for a server without an attached service account:
+
 1. In the Yandex Cloud console, folder `default`: create a service account with the `ai.languageModels.user` role, then an API key for it (scope `yc.ai.foundationModels.execute`). Keep the key out of chat, email and this repo.
 2. On the server, paste it at the silent prompt:
 

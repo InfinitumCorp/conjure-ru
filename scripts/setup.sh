@@ -3,7 +3,7 @@
 # Without CONJURE_LLM_* it runs on the mock provider. Re-runnable; safe to run again to upgrade.
 set -euo pipefail
 # Conjure commit to run. Bump this (full 40-char SHA from InfinitumCorp/Conjure main) to upgrade.
-SHA=${CONJURE_SHA:-44e6973dd648179886713f073aff78e08b089506}
+SHA=${CONJURE_SHA:-3d20894e55f442269dc1a7297efad2bac605b2c0}
 APP=conjure-ru.infinitumcorporation.ai
 PREVIEW=conjure-ru-preview.infinitumcorporation.ai
 MYIP=51.250.92.75
@@ -89,9 +89,21 @@ unset_env() { # name: remove a line from /etc/conjure/env
   sudo install -m 0600 "$tmp" /etc/conjure/env
   sudo rm -f "$tmp"
 }
+# Preferred: no key at all. With a service account attached to this VM (conjure-models, role
+# ai.languageModels.user), Conjure signs each call with the VM's own short-lived IAM token:
+#   CONJURE_LLM_AUTH=yandex-vm bash scripts/setup.sh
+# setup.sh checks the VM can get a token before switching.
+if [ "${CONJURE_LLM_AUTH:-}" = yandex-vm ]; then
+  curl -fsS --max-time 5 -o /dev/null -H Metadata-Flavor:Google \
+    http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token \
+    || { log "no service account on this VM: attach one (ai.languageModels.user) or pass CONJURE_LLM_KEY"; exit 1; }
+  set_env CONJURE_LLM_AUTH yandex-vm
+  unset_env CONJURE_LLM_KEY
+  CONJURE_LLM_KEY=vm # takes the branch below; never written
+fi
 if [ -n "${CONJURE_LLM_KEY:-}" ]; then
   set_env CONJURE_LLM_URL "$YANDEX_URL"
-  set_env CONJURE_LLM_KEY "$CONJURE_LLM_KEY"
+  if [ "$CONJURE_LLM_KEY" != vm ]; then set_env CONJURE_LLM_KEY "$CONJURE_LLM_KEY"; unset_env CONJURE_LLM_AUTH; fi
   set_env CONJURE_LLM_PROJECT "$YANDEX_FOLDER"
   set_env CONJURE_LLM_MODEL "$YANDEX_MODEL"
   # Only sent when asked for: AI Studio documents no reasoning setting for Qwen.
