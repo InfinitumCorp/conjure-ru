@@ -10,7 +10,7 @@ The application code stays in [InfinitumCorp/Conjure](https://github.com/Infinit
 |---|---|
 | Hosting | Yandex Cloud, nginx + Let's Encrypt in front of Node on 127.0.0.1 |
 | Model provider | **100% in Russia, no Claude.** Predictions and code generation run on open-weight models on **Yandex Cloud AI Studio** (default Qwen3.6 35B, Apache 2.0, 256k context; AI Studio withdrew gpt-oss on 2026-10-30), in Russian data centers. `setup.sh` refuses to run if `ANTHROPIC_API_KEY` is set or a model URL points outside Russia, and removes any Cloudflare gateway settings. AI Studio bills per token to the Yandex account (see its [pricing page](https://aistudio.yandex.ru/docs/en/ai-studio/pricing.html)); the account's 4,000 ₽ starter grant covers it at first. With no `CONJURE_LLM_KEY` it runs on the mock provider |
-| Sign-in | Required (`CONJURE_ACCESS_TOKEN` set). Staff sign in with Cumulus ID; only IDs in `CID_OWNERS` get in |
+| Sign-in | Required (`CONJURE_ACCESS_TOKEN` set). Sign in with Cumulus ID; only IDs in `CID_OWNERS` get in (no staff list) |
 | Preview | Separate host `conjure-ru-preview.infinitumcorporation.ai` (127.0.0.1:4318) |
 | Backups | Yandex disk snapshot daily at 00:00 UTC, 7 kept |
 
