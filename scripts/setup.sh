@@ -3,7 +3,7 @@
 # Without CONJURE_LLM_* it runs on the mock provider. Re-runnable; safe to run again to upgrade.
 set -euo pipefail
 # Conjure commit to run. Bump this (full 40-char SHA from InfinitumCorp/Conjure main) to upgrade.
-SHA=${CONJURE_SHA:-bc7fa48cc6320ec247c956bf32c576c1ab6b10d9}
+SHA=${CONJURE_SHA:-44e6973dd648179886713f073aff78e08b089506}
 APP=conjure-ru.infinitumcorporation.ai
 PREVIEW=conjure-ru-preview.infinitumcorporation.ai
 MYIP=51.250.92.75
@@ -53,24 +53,26 @@ CONJURE_PUBLIC_URL=https://$APP
 # CID_OWNERS=
 # A Cumulus ID mirror that loads in Russia, if id.cumuluscloud.app does not:
 # CID_ISSUER=
-# Predictions without Claude (open-weight models via the conjure-llm gateway). Empty = mock provider.
-# Never add ANTHROPIC_API_KEY on this server.
-# CONJURE_LLM_URL=
+# Models: open-weight models on Yandex Cloud AI Studio, inside Russia. Empty = mock provider.
+# setup.sh fills these in when CONJURE_LLM_KEY is passed. Never add ANTHROPIC_API_KEY on this server,
+# and never point CONJURE_LLM_URL at a server outside Russia (setup.sh refuses both).
+# CONJURE_LLM_URL=https://ai.api.cloud.yandex.net/v1
 # CONJURE_LLM_KEY=
-# CONJURE_LLM_ACCESS_ID=
-# CONJURE_LLM_ACCESS_SECRET=
-# CONJURE_LLM_MODEL=@cf/qwen/qwen3-30b-a3b-fp8
-# CONJURE_LLM_REASONING=none
+# CONJURE_LLM_PROJECT=
+# CONJURE_LLM_MODEL=gpt://<folder>/gpt-oss-120b/latest
+# CONJURE_LLM_REASONING=low
 EOF
 fi
 
-# Model gateway: open-weight models through conjure-llm on Cloudflare (Workers AI within its free
-# allowance, then free fallbacks: OVHcloud, Pollinations, LLM7, plus Groq/NVIDIA/OpenRouter if keyed).
-# The gateway calls those providers from Cloudflare, so geo-blocks on Russian IPs don't apply.
-# Pass the gateway values in the environment to set or replace them in /etc/conjure/env:
-#   CONJURE_LLM_KEY=... CONJURE_LLM_ACCESS_ID=... CONJURE_LLM_ACCESS_SECRET=... bash scripts/setup.sh
-# They are written root-only and never printed. Without a key the server stays on the mock provider.
-GATEWAY_URL=https://conjure-llm.infinitumcorp.workers.dev/v1
+# Models: Conjure Russia runs 100% in Russia, models included. Predictions and code generation use
+# open-weight models on Yandex Cloud AI Studio (Russian data centers), billed to the Yandex account.
+# Pass an AI Studio API key (service account with ai.languageModels.user) to set or replace it:
+#   read -rs CONJURE_LLM_KEY && export CONJURE_LLM_KEY && bash scripts/setup.sh
+# It is written root-only and never printed. Without a key the server stays on the mock provider.
+YANDEX_FOLDER=${YANDEX_FOLDER:-b1g3bonfmtl53fs762er}
+YANDEX_URL=https://ai.api.cloud.yandex.net/v1
+# gpt-oss-120b (Apache 2.0): tool calling and reasoning; Qwen3 235B is the larger alternative.
+YANDEX_MODEL=${CONJURE_LLM_MODEL:-gpt://$YANDEX_FOLDER/gpt-oss-120b/latest}
 set_env() { # name value: replace or append one line in /etc/conjure/env
   local tmp
   tmp=$(sudo mktemp)
@@ -79,22 +81,47 @@ set_env() { # name value: replace or append one line in /etc/conjure/env
   sudo install -m 0600 "$tmp" /etc/conjure/env
   sudo rm -f "$tmp"
 }
+unset_env() { # name: remove a line from /etc/conjure/env
+  local tmp
+  tmp=$(sudo mktemp)
+  sudo grep -v "^$1=" /etc/conjure/env | sudo tee "$tmp" >/dev/null || true
+  sudo install -m 0600 "$tmp" /etc/conjure/env
+  sudo rm -f "$tmp"
+}
 if [ -n "${CONJURE_LLM_KEY:-}" ]; then
-  set_env CONJURE_LLM_URL "${CONJURE_LLM_URL:-$GATEWAY_URL}"
+  set_env CONJURE_LLM_URL "$YANDEX_URL"
   set_env CONJURE_LLM_KEY "$CONJURE_LLM_KEY"
-  set_env CONJURE_LLM_MODEL "${CONJURE_LLM_MODEL:-@cf/qwen/qwen3-30b-a3b-fp8}"
-  set_env CONJURE_LLM_REASONING "${CONJURE_LLM_REASONING:-none}"
-  if [ -n "${CONJURE_LLM_ACCESS_ID:-}" ] && [ -n "${CONJURE_LLM_ACCESS_SECRET:-}" ]; then
-    set_env CONJURE_LLM_ACCESS_ID "$CONJURE_LLM_ACCESS_ID"
-    set_env CONJURE_LLM_ACCESS_SECRET "$CONJURE_LLM_ACCESS_SECRET"
-  fi
-  log "model gateway set: ${CONJURE_LLM_URL:-$GATEWAY_URL}"
+  set_env CONJURE_LLM_PROJECT "$YANDEX_FOLDER"
+  set_env CONJURE_LLM_MODEL "$YANDEX_MODEL"
+  set_env CONJURE_LLM_REASONING "${CONJURE_LLM_REASONING:-low}"
+  log "models: Yandex AI Studio, $(basename "$(dirname "$YANDEX_MODEL")")"
 fi
-# Belt and braces: this server must never talk to Claude.
+# The Cloudflare gateway's Access token has no place here: everything stays in Russia.
+unset_env CONJURE_LLM_ACCESS_ID
+unset_env CONJURE_LLM_ACCESS_SECRET
+
+# Guards: this server must never talk to Claude or send prompts to a model outside Russia.
 if sudo grep -q '^ANTHROPIC_API_KEY=' /etc/conjure/env; then
   echo "[conjure] ANTHROPIC_API_KEY must never be set on the Russia server; remove it from /etc/conjure/env" >&2
   exit 1
 fi
+russian_host() { # URL: Yandex Cloud or this machine
+  local host
+  host=$(printf '%s' "$1" | sed -E 's#^[a-z]+://##; s#[/:].*$##')
+  case "$host" in
+    *.yandex.net | *.yandexcloud.net | *.yandex.ru | *.yandex.cloud | localhost | 127.0.0.1) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+for var in CONJURE_LLM_URL CONJURE_OPEN_WEIGHTS_URL; do
+  urls=$(sudo grep "^$var=" /etc/conjure/env | cut -d= -f2- || true)
+  for u in ${urls//,/ }; do
+    if ! russian_host "$u"; then
+      echo "[conjure] $var points outside Russia ($u); Conjure Russia keeps every model call in Russia" >&2
+      exit 1
+    fi
+  done
+done
 
 sudo tee /etc/systemd/system/conjure.service >/dev/null <<EOF
 [Unit]
