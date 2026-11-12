@@ -9,7 +9,7 @@ The application code stays in [InfinitumCorp/Conjure](https://github.com/Infinit
 | | Russia |
 |---|---|
 | Hosting | Yandex Cloud, nginx + Let's Encrypt in front of Node on 127.0.0.1 |
-| Model provider | **100% in Russia, no Claude.** Predictions and code generation run on open-weight models on **Yandex Cloud AI Studio** (default Qwen3.6 35B, Apache 2.0, 256k context; AI Studio withdrew gpt-oss on 2026-10-30), in Russian data centers. `setup.sh` refuses to run if `ANTHROPIC_API_KEY` is set or a model URL points outside Russia, and removes any Cloudflare gateway settings. AI Studio bills per token to the Yandex account (see its [pricing page](https://aistudio.yandex.ru/docs/en/ai-studio/pricing.html)); the account's 4,000 ₽ starter grant covers it at first. With no `CONJURE_LLM_KEY` it runs on the mock provider |
+| Model provider | **100% in Russia, no Claude.** Predictions and code generation run on open-weight models on **Yandex Cloud AI Studio** (default Qwen3.6 35B, Apache 2.0, 256k context; AI Studio withdrew gpt-oss on 2026-10-30), in Russian data centers. `setup.sh` refuses to run if `ANTHROPIC_API_KEY` is set or a model URL points outside Russia, and removes any Cloudflare gateway settings. AI Studio bills per token to the Yandex account (see its [pricing page](https://aistudio.yandex.ru/docs/en/ai-studio/pricing.html)); the account's 4,000 ₽ starter grant covers it at first. Live only: with no model configured it refuses builds and forecasts (no demo mode) |
 | Sign-in | Required (`CONJURE_ACCESS_TOKEN` set). Sign in with Cumulus ID; only IDs in `CID_OWNERS` get in (no staff list) |
 | Preview | Separate host `conjure-ru-preview.infinitumcorporation.ai` (127.0.0.1:4318) |
 | Backups | Yandex disk snapshot daily at 00:00 UTC, 7 kept |
@@ -37,7 +37,7 @@ Each product needs `CONJURE_URL` and its own product key. Issue the key in the d
 
 SCALVS.ai is not on the list: its `CONJURE_URL` setting expects a MiroFish-style engine, not Conjure's `/v1` API, and it forecasts on its own engine until it is ported.
 
-Wait until the server runs real models (a Yandex key is set); in mock mode every product would get placeholder forecasts.
+Wait until the server runs real models; without one it refuses forecasts (Conjure has no demo mode).
 
 ## Layout
 
@@ -63,7 +63,7 @@ Created once by `setup.sh` with a random `CONJURE_ACCESS_TOKEN`. Fill in on the 
 
 - `CID_OWNERS`: the Cumulus IDs (`cid_...`) allowed in. Until set, nobody can sign in.
 - `CID_ISSUER` (optional): a Cumulus ID mirror, only if id.cumuluscloud.app stops loading from Russia.
-- `CONJURE_LLM_URL`, `CONJURE_LLM_KEY`, `CONJURE_LLM_PROJECT`, `CONJURE_LLM_MODEL`, `CONJURE_LLM_REASONING`: Yandex AI Studio. Empty means mock mode. Don't edit these by hand; give `setup.sh` the key and it fills in the rest (URL `https://ai.api.cloud.yandex.net/v1`, folder `b1g3bonfmtl53fs762er`, model `gpt://<folder>/qwen3.6-35b-a3b`, reasoning off: `CONJURE_LLM_REASONING=none`).
+- `CONJURE_LLM_URL`, `CONJURE_LLM_KEY`, `CONJURE_LLM_PROJECT`, `CONJURE_LLM_MODEL`, `CONJURE_LLM_REASONING`: Yandex AI Studio. Empty means no builds or forecasts (live only). Don't edit these by hand; give `setup.sh` the key and it fills in the rest (URL `https://ai.api.cloud.yandex.net/v1`, folder `b1g3bonfmtl53fs762er`, model `gpt://<folder>/qwen3.6-35b-a3b`, thinking on: `CONJURE_LLM_REASONING=medium`, with 4,096 extra tokens per call for it, `CONJURE_LLM_THINK_TOKENS`).
 
 ### Turning the models on
 

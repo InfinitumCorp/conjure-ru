@@ -1,9 +1,9 @@
 #!/bin/bash
 # Conjure Russia on Yandex (conjure-russia, Ubuntu 24.04). No Claude: no ANTHROPIC_API_KEY ever.
-# Without CONJURE_LLM_* it runs on the mock provider. Re-runnable; safe to run again to upgrade.
+# Live only: without CONJURE_LLM_* it refuses builds and forecasts (no demo mode). Re-runnable; safe to run again to upgrade.
 set -euo pipefail
 # Conjure commit to run. Bump this (full 40-char SHA from InfinitumCorp/Conjure main) to upgrade.
-SHA=${CONJURE_SHA:-c4f89bb4b289e2fd3812cadb0a7bf34c441cd2a7}
+SHA=${CONJURE_SHA:-74c37b59b2ba8bc9a9e26bf238321d689e04ca50}
 APP=conjure-ru.infinitumcorporation.ai
 PREVIEW=conjure-ru-preview.infinitumcorporation.ai
 MYIP=51.250.92.75
@@ -53,7 +53,7 @@ CONJURE_PUBLIC_URL=https://$APP
 # CID_OWNERS=
 # A Cumulus ID mirror that loads in Russia, if id.cumuluscloud.app does not:
 # CID_ISSUER=
-# Models: open-weight models on Yandex Cloud AI Studio, inside Russia. Empty = mock provider.
+# Models: open-weight models on Yandex Cloud AI Studio, inside Russia. Empty = no builds or forecasts.
 # setup.sh fills these in when CONJURE_LLM_KEY is passed. Never add ANTHROPIC_API_KEY on this server,
 # and never point CONJURE_LLM_URL at a server outside Russia (setup.sh refuses both).
 # CONJURE_LLM_URL=https://ai.api.cloud.yandex.net/v1
@@ -68,7 +68,7 @@ fi
 # open-weight models on Yandex Cloud AI Studio (Russian data centers), billed to the Yandex account.
 # Pass an AI Studio API key (service account with ai.languageModels.user) to set or replace it:
 #   read -rs CONJURE_LLM_KEY && export CONJURE_LLM_KEY && bash scripts/setup.sh
-# It is written root-only and never printed. Without a key the server stays on the mock provider.
+# It is written root-only and never printed. Without a model the server refuses work (live only).
 YANDEX_FOLDER=${YANDEX_FOLDER:-b1g3bonfmtl53fs762er}
 YANDEX_URL=https://ai.api.cloud.yandex.net/v1
 # Qwen3.6 35B (Apache 2.0, 256k context): AI Studio's current open-weight model. gpt-oss was
@@ -106,10 +106,11 @@ if [ -n "${CONJURE_LLM_KEY:-}" ]; then
   if [ "$CONJURE_LLM_KEY" != vm ]; then set_env CONJURE_LLM_KEY "$CONJURE_LLM_KEY"; unset_env CONJURE_LLM_AUTH; fi
   set_env CONJURE_LLM_PROJECT "$YANDEX_FOLDER"
   set_env CONJURE_LLM_MODEL "$YANDEX_MODEL"
-  # "none" turns Qwen's thinking off. Tested on AI Studio 2026-11-12: with thinking on, Qwen3.6 spent
-  # ~1,400 tokens thinking about 2+2, so real prompts ran out of tokens before the JSON answer.
-  # Pass CONJURE_LLM_REASONING=low|medium|high to change it.
-  set_env CONJURE_LLM_REASONING "${CONJURE_LLM_REASONING:-none}"
+  # Thinking is on (William, 2026-11-12). It used to be off ("none") because Qwen3.6 spent ~1,400
+  # tokens thinking about 2+2 and real prompts ran out of tokens before the JSON answer; Conjure
+  # 74c37b5 gives every call CONJURE_LLM_THINK_TOKENS (default 4096) on top of its answer budget.
+  # Pass CONJURE_LLM_REASONING=low|high to change the level, or none to turn thinking off.
+  set_env CONJURE_LLM_REASONING "${CONJURE_LLM_REASONING:-medium}"
   log "models: Yandex AI Studio, ${YANDEX_MODEL#gpt://*/}"
 fi
 # The global hostname (front/, a Cloudflare Worker) forwards here; staff who sign in through it are
