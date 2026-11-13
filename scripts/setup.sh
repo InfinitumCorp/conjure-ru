@@ -3,7 +3,7 @@
 # Live only: without CONJURE_LLM_* it refuses builds and forecasts (no demo mode). Re-runnable; safe to run again to upgrade.
 set -euo pipefail
 # Conjure commit to run. Bump this (full 40-char SHA from InfinitumCorp/Conjure main) to upgrade.
-SHA=${CONJURE_SHA:-74c37b59b2ba8bc9a9e26bf238321d689e04ca50}
+SHA=${CONJURE_SHA:-9cef66372e871d219a4ace17bd79fadb42c309a0}
 APP=conjure-ru.infinitumcorporation.ai
 PREVIEW=conjure-ru-preview.infinitumcorporation.ai
 MYIP=51.250.92.75
